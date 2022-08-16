@@ -1,4 +1,5 @@
-#! /home/lar/miniconda3/envs/ariadneplus/bin/python
+#! /usr/bin/python3
+## #! /home/lar/miniconda3/envs/ariadneplus/bin/python
 import numpy as np
 from PIL import Image 
 import cv2 

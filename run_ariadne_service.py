@@ -1,4 +1,5 @@
-#! /home/lar/miniconda3/envs/ariadneplus/bin/python
+#! /usr/bin/python3
+## #! /home/lar/miniconda3/envs/ariadneplus/bin/python
 import numpy as np
 from PIL import Image 
 
@@ -6,6 +7,7 @@ from PIL import Image
 import rospy
 import sensor_msgs
 import rospkg
+import cv2
 from cv_bridge import CvBridge
 
 # services and messages
@@ -15,6 +17,15 @@ from ariadne_plus.msg import spline_tck
 # ariadne
 from scripts.ariadne import AriadnePlus
 
+
+def display_img(img):
+    cv2.imshow('image', img)
+    show_window = True
+    while show_window:
+        k = cv2.waitKey(0) & 0xFF
+        if k == 27:#ESC
+            cv2.destroyAllWindows()
+            show_window = False
 
 class Service(object):
 
@@ -40,8 +51,12 @@ class Service(object):
 
     def service_callback(self, req):
         
-        image = rospy.wait_for_message(self.topic_camera, sensor_msgs.msg.Image)
+        # print("service_debugging")
+        # # image = rospy.wait_for_message(self.topic_camera, sensor_msgs.msg.Image)
+        image = req.input_image
         cv_image = self.bridge.imgmsg_to_cv2(image, desired_encoding='passthrough')
+
+        # display_img(cv_image)
 
         print("received image with shape: ", cv_image.shape)
 
@@ -50,8 +65,6 @@ class Service(object):
         res = getSplinesResponse()
         res.mask_image = self.generateImage(rv["img_mask"]) 
         res.tck = self.generateSpline(rv["spline_msg"])
-
-
 
         return res
  

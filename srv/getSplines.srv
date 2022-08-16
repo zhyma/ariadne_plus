@@ -1,3 +1,4 @@
+sensor_msgs/Image input_image
 ---
 sensor_msgs/Image mask_image
 ariadne_plus/spline_tck[] tck

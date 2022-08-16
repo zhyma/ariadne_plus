@@ -1,4 +1,5 @@
-#! /home/alessio/anaconda3/envs/ariadneplus/bin/python
+#! /usr/bin/python3
+## #! /home/alessio/anaconda3/envs/ariadneplus/bin/python
 import numpy as np
 import cv2, os
 from PIL import Image
