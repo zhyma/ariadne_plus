@@ -64,6 +64,7 @@ class Service(object):
         
         res = getSplinesResponse()
         res.mask_image = self.generateImage(rv["img_mask"]) 
+        # res.final_image = self.generateImage(rv["img_final"])
         res.tck = self.generateSpline(rv["spline_msg"])
 
         return res

@@ -54,16 +54,10 @@ The repository contains also an implementation of Ariande+ as ROS Service. Just 
 roslaunch ariadne_plus ariadne.launch
 ```
 
-Inside the launch file you can speciy the topic of the camera used to retrieve the image samples along with the usual parameters of Ariadne+. 
 
-For testing purposes, you can also launch a *fake* camera topic which publishes one of the test images with:
+and test the Ariande+ service with :
 ```
-roslaunch ariadne_plus fake_camera_topic.launch
-```
-
-and call the Ariande+ service with (```/get_splines``` is the topic of the service specified in ```ariadne.launch```):
-```
-rosservice call /get_splines "{}"
+python service_test.py
 ```
 
 
