@@ -1,32 +1,28 @@
 import cv2
 import os
 
+from skimage.morphology import skeletonize
+import matplotlib.pyplot as plt
+
 # ariadne
 from scripts.ariadne import AriadnePlus
 
-from winding.create_mask import hue_masked, apply_crop, draw_dl_mask
+from winding.create_mask import hue_masked, apply_crop, draw_dl_mask, expand_mask
 import numpy as np
 
-from scripts.extra.hue_extract import mask_or
+from winding.post_process import rope_grow
+from skimage.morphology import skeletonize
+
+# from scripts.extra.post_process import mask_or
 
 file_list = []
 for filename in os.listdir('./winding'):
     if filename.endswith('png'):
         file_list.append(filename)
 
-# import argparse
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--img_path', required=True, help='relative path of the input image')
-# parser.add_argument('--num_segments', default=20, help='number superpixels segments')
-# parser.add_argument('--show', action = "store_true", help='show result computation')
-# args = parser.parse_args()
 
-
-# num_segments = int(args.num_segments)
-# <arg name="num_superpixels" default="30"/>
 num_segments = 30
-# show_result = bool(args.show)
-show_result = False
+show_result = True
 
 main_folder = os.getcwd()
 
@@ -38,12 +34,9 @@ ariadne = AriadnePlus(main_folder, num_segments)
 ##################################
 # Loading Input Image
 ##################################
-# img_path = os.path.join(main_folder, args.img_path)
-# img_path = 'winding/image1.jpg'
-# img_path = 'winding/08-31-15-38-15.png'
-# img_path = 'winding/08-31-15-39-10.png'
-# img_path = 'winding/08-31-15-39-42.png'
-# img_path = 'winding/08-31-15-40-08.png'
+
+if show_result:
+    file_list = [file_list[-1]]
 
 for img_name in file_list:
 
@@ -53,6 +46,15 @@ for img_name in file_list:
     # corners = np.array([[943, 378],[530,363],[533,304],[945,318]])
     corners = np.array([[923, 391],[508,370],[512,310],[927,331]])
 
+    ## Use hue range to generate a feature map
+    mask_by_hue = hue_masked(img, corners)
+    feature_mask = cv2.resize(mask_by_hue, (640,480))
+
+    ##################################
+    # Run pipeline
+    ##################################
+
+    ## extract 4:3 image that includes ropes.
     sort1 = corners[corners[:,1].argsort()]
     sort2 = corners[corners[:,0].argsort()]
     y1 = sort1[0,1]-10
@@ -72,39 +74,38 @@ for img_name in file_list:
 
     crop_corners= np.array([[x1,y1],[x2,y1],[x2,y2],[x1,y2]])
 
-    # cropped_img = cv2.resize(apply_crop(img, crop_corners), (640,480))
     cropped_img = cv2.resize(img[y1:y2,x1:x2], (640,480))
 
-    mask_by_hue = hue_masked(img, corners)
-    feature_mask = cv2.resize(mask_by_hue, (640,480))
+    rv = ariadne.runAriadne(cropped_img, debug=True)
 
-    # img = cv2.resize(cropped_img, (640,480)) # resize necessary for the network model
+    rope_mask = rope_grow(rv["img_mask"], feature_mask)
+
+    flesh = np.where(rope_mask>100, 1, 0)
+    skeleton = skeletonize(flesh)
+    ropes = (np.where(skeleton==True, 255, 0)).astype(np.uint8)
+
+    full_mask = expand_mask(img.shape, crop_corners, ropes)
 
     ##################################
-    # Run pipeline
-    ##################################
+    # Check the result
+    ################################## 
 
-
-    # corners = np.array([[923, 391],[508,370],[512,310],[927,331]])
-    rv = ariadne.runAriadne(cropped_img, feature_mask, debug=True)
-
-    new_mask = mask_or(feature_mask, rv['img_mask'])
-
-
-    # show_feature = draw_dl_mask(img, crop_corners, feature_mask, color='g')
-    # show_mask = draw_dl_mask(img, crop_corners, rv["img_mask"], color='b')
-    # hori = np.concatenate((show_feature, show_mask), axis=1)
-
-    cv2.imwrite('winding/'+img_name[:-4]+'_output.jpg', draw_dl_mask(img, crop_corners, new_mask, color='b'))
+    kernel = np.ones((5, 5), np.uint8)
+    mask_dilate = cv2.dilate(full_mask, kernel, iterations=1)
+    new_img = draw_dl_mask(img, np.array([[0, 0],[1279,0],[1279,719],[0, 719]]), mask_dilate, color='b')
+    cv2.polylines(new_img,[corners],True,(0,255,255))
 
     if show_result: 
         ##################################
         # Show result
         ##################################
         # cv2.imshow("img_input", img)
-        # cv2.imshow("result", draw_dl_mask(img, crop_corners, rv["img_mask"], color='b'))
-        # cv2.imshow("img_final", rv["img_final"])
-        # cv2.imshow("hue_masked", hori)
-        # cv2.imshow("img_mask", rv["img_mask"])
-        cv2.imshow("img_mask", draw_dl_mask(img, crop_corners, new_mask, color='b'))
+        # new_img = draw_dl_mask(img, crop_corners, rv["img_mask"], color='b')
+        
+        cv2.imshow("result", new_img)
         cv2.waitKey(0)
+        # plt.imshow(ropes)
+        # plt.show()
+
+    else:
+        cv2.imwrite('winding/'+img_name[:-4]+'_output.jpg', new_img)
