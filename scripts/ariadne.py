@@ -14,6 +14,7 @@ from scripts.core.core import Ariadne, AriadnePath
 from scripts.core.curvature import CurvatureVonMisesPredictor
 from scripts.utils.spline import Spline, SplineMask
 
+from scripts.extra.hue_extract import *
 
 
 class AriadnePlus():
@@ -75,7 +76,7 @@ class AriadnePlus():
         return full_mask
 
 
-    def runAriadne(self, img, debug=False):
+    def runAriadne(self, img, feature_mask, debug=False):
 
         t0 = arrow.utcnow()
         if debug: print("-> Computing image binary mask ... ")
@@ -90,51 +91,55 @@ class AriadnePlus():
 
         t1 = arrow.utcnow()
 
-        ##################################
-        # Initialization GRAPH
-        ##################################
-        if debug: print("-> Generating image graph ... ")
-        img_bgr = img[:,:,::-1] 
-        ariadne = Ariadne(img_bgr, img_mask, num_segments=self.num_segments)
+        # ##################################
+        # # Initialization GRAPH
+        # ##################################
+        # if debug: print("-> Generating image graph ... ")
+        # img_bgr = img[:,:,::-1] 
+        # ariadne = Ariadne(img_bgr, img_mask, num_segments=self.num_segments)
 
-        ##################################
-        # Paths Discovery
-        ##################################
-        if debug: print("-> Discovering paths ... ")
-        ariadnePathCNN = AriadnePath(   ariadne, 
-                                        triplet_net=self.tripletnet, 
-                                        cross_net=self.crossnet, 
-                                        curvature_pred=CurvatureVonMisesPredictor(ariadne),
-                                        device=self.device)
-        result_all = ariadnePathCNN.mainPathFinder()
+        # ##################################
+        # # Paths Discovery
+        # ##################################
+        # if debug: print("-> Discovering paths ... ")
+        # ariadnePathCNN = AriadnePath(   ariadne, 
+        #                                 triplet_net=self.tripletnet, 
+        #                                 cross_net=self.crossnet, 
+        #                                 curvature_pred=CurvatureVonMisesPredictor(ariadne),
+        #                                 device=self.device)
+        # result_all = ariadnePathCNN.mainPathFinder()
 
-        t2 = arrow.utcnow()
+        # t2 = arrow.utcnow()
 
-        ##################################
-        # Spline Msg
-        ##################################
-        if debug: print("-> Building spline model ... ")
+        # ##################################
+        # # Spline Msg
+        # ##################################
+        # if debug: print("-> Building spline model ... ")
 
-        # spline output msg
-        spline_model = Spline(ariadne)
-        result_spline = spline_model.genereteOutputSplinesMsg(result_all)
+        # # spline output msg
+        # spline_model = Spline(ariadne)
+        # result_spline = spline_model.genereteOutputSplinesMsg(result_all)
     
 
-        # colorized output mask
-        spline = SplineMask(ariadne)
-        masks_labeled_dict = spline.generateSingleLabels(result_all)
+        # # colorized output mask
+        # spline = SplineMask(ariadne)
+        # masks_labeled_dict = spline.generateSingleLabels(result_all)
     
-        indeces_dict = ariadnePathCNN.crossnetPredFast(result_all, masks_labeled_dict)
-        mask_final = spline.drawFinalMaskSpline(result_all, indeces_dict)
+        # indeces_dict = ariadnePathCNN.crossnetPredFast(result_all, masks_labeled_dict)
+        # mask_final = spline.drawFinalMaskSpline(result_all, indeces_dict)
         
-        t3 = arrow.utcnow()
-        if debug:
-            print("segmentation: \t\t", (t1-t0).total_seconds())
-            print("paths discovery: \t", (t2-t1).total_seconds())
-            print("output generation: \t", (t3-t2).total_seconds())
+        # t3 = arrow.utcnow()
+        # if debug:
+        #     print("segmentation: \t\t", (t1-t0).total_seconds())
+        #     print("paths discovery: \t", (t2-t1).total_seconds())
+        #     print("output generation: \t", (t3-t2).total_seconds())
 
-            print("RESULT ARIADNE PATHS NODES: ")
-            for p in result_all: print(p)
+        #     print("RESULT ARIADNE PATHS NODES: ")
+        #     for p in result_all: print(p)
+        result_spline = [-1]
+        mask_final = None
+        t3 = arrow.utcnow()
+        t0 = arrow.utcnow()
 
 
         return {"spline_msg": result_spline, 
