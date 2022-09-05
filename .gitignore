@@ -1,5 +1,7 @@
 checkpoints/
-winding/
+winding/*.png
+winding/*.jpg
+winding/*.jpeg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
