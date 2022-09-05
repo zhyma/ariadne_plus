@@ -61,12 +61,6 @@ def find_ropes(img):
     
     ropes = []
     [height, width] = img.shape
-    # iy = 719
-    # for ix in range(width):
-    #     if img[iy, ix] > 100:
-    #         ropes.append(rope_info())
-    #         ropes[-1].link = [iy, ix]
-    #         ropes[-1].len = 1
 
     for iy in range(height-1, 0, -1):
         for ix in range(width):
@@ -74,7 +68,7 @@ def find_ropes(img):
                 ## a pixel belong to a piece of rope
                 connected = []
                 for j in ropes:
-                    if abs(iy-j.link[0][0]) + abs(ix-j.link[0][1]) <= 2:
+                    if abs(iy-j.link[0][1]) + abs(ix-j.link[0][0]) <= 2:
                         ## is connected to one of the rope
                         connected.append(j)
                 if len(connected) > 0:
@@ -87,31 +81,93 @@ def find_ropes(img):
                                 max_len = k.len
                             grow_dir.append(k)
                     for k in grow_dir:
-                        k.link = [[iy, ix]] + k.link
+                        k.link = [[ix, iy]] + k.link
                         k.len += 1
                 else:
                     ## no previous section, create a new one
                     ropes.append(rope_info())
-                    ropes[-1].link = [[iy, ix]]
+                    ropes[-1].link = [[ix, iy]]
                     ropes[-1].len = 1
             else:
                 continue
-    
-    for r in ropes:
-        print(r.len, end=',')
-    print('')
 
     ropes.sort(key=operator.attrgetter('len'), reverse=True)
-    ropes = ropes[:2]
+    if len(ropes) >= 2:
+        ## always return the one for winding first, the "fix end" as the 2nd
+        ropes[0].estimate_center()
+        ropes[1].estimate_center()
+        if ropes[0].center[0] > ropes[1].center[0]:
+            detected = [ropes[0], ropes[1]]
+        else:
+            detected = [ropes[1], ropes[0]]
+    else:
+        detected = None
 
-    return ropes
+    return detected
 
+def find_gp(rope, poly, l_expect):
+    ## check the distance from the bottom of the rod to the top of the link
+    sort1 = poly[poly[:,1].argsort()]
+    [x1, y1] = sort1[2]
+    [x2, y2] = sort1[3]
+    a = (y2-y1)/(x2-x1)
+    b = y1-a*x1
 
-    # top2 = [] ## the longest one and the 2nd longest one
-    # for i in skeletons:
+    l_actual = 0
+
+    cnt = 0
+    [x, y] = rope.link[0]
+    y_ = a*x+b
+    while cnt < rope.len-1:
+        [x, y] = rope.link[cnt]
+        y_ = a*x+b
+        if y > y_:
+            break
+        else:
+            cnt += 1
+
+    ## no intersection, estimate the distance from the 2nd link to the rod
+    if (cnt==0) and y > y_:
+        cnt = 1
+        [x, y] = rope.link[cnt]
+        l_actual = abs(-a*x+y-b)/sqrt(a**2+1)
+        print('l_actual init: {0}'.format(l_actual))
+
+    while (cnt < rope.len-1):
+        link0 = rope.link[cnt-1]
+        link1 = rope.link[cnt]
+        l_actual += sqrt((link0[0]-link1[0])**2+(link0[1]-link1[1])**2)
+        if l_actual >= l_expect:
+            break
+        else:
+            cnt += 1
+
+    if l_actual < l_expect:
+        ## need to extend 
+        [x1, y1] = rope.link[rope.len//2]
+        [x2, y2] = rope.link[-1]
+        l = sqrt((x1-x2)**2+(y1-y2)**2)
+        dl = l_expect-l_actual
+        dy = dl/l*(y2-y1)
+        dx = sqrt(dl**2-dy**2)
+        if x1 > x2:
+            x_ = x2 + dx
+        else:
+            x_ = x2 - dx
+        return [int(x), int(y2+dy)]
+    else:
+        return rope.link[cnt]
 
 class rope_info():
     def __init__(self):
-        self.link = []
+        self.link = [] # [[x0, y0], [x1, y1], ...]
         self.center = None
         self.len = 0
+
+    def estimate_center(self):
+        sum = [0, 0]
+        for i in self.link:
+            sum[0] += i[0]
+            sum[1] += i[1]
+
+        self.center = [sum[0]/self.len, sum[1]/self.len]

@@ -12,7 +12,7 @@ from winding.create_mask import apply_crop, draw_dl_mask
 import numpy as np
 
 from winding.rope_pre_process import get_subimg
-from winding.rope_post_process import get_rope_mask, find_ropes
+from winding.rope_post_process import get_rope_mask, find_ropes, find_gp
 
 
 # from scripts.extra.post_process import mask_or
@@ -24,7 +24,7 @@ for filename in os.listdir('./winding'):
 
 
 num_segments = 30
-show_result = False
+show_result = True
 
 main_folder = os.getcwd()
 
@@ -38,7 +38,10 @@ ariadne = AriadnePlus(main_folder, num_segments)
 ##################################
 
 if show_result:
-    file_list = [file_list[12]]
+    # file_list = [file_list[12]]
+    file_list = [file_list[20]]
+    # file_list = [file_list[21]]
+    # file_list = [file_list[0]]
 
 for img_name in file_list:
 
@@ -63,14 +66,17 @@ for img_name in file_list:
     full_mask = get_rope_mask(img.shape[:2], crop_corners, rv["img_mask"], feature_mask)
     r = find_ropes(full_mask)
 
-    new_img = copy.deepcopy(img)
-    for i in r[0].link:
-        [y, x] = i
-        new_img = cv2.circle(new_img, (x,y), radius=2, color=(255, 0, 0), thickness=-1)
+    l_expect = 200
+    pts = find_gp(r[0], corners, l_expect)
 
-    for i in r[1].link:
-        [y, x] = i
-        new_img = cv2.circle(new_img, (x,y), radius=2, color=(0, 255, ), thickness=-1)
+    new_img = copy.deepcopy(img)
+    if r is not None:
+        for i in r[1].link:
+            new_img = cv2.circle(new_img, i, radius=2, color=(0, 255, 0), thickness=-1)
+        for i in r[0].link:
+            new_img = cv2.circle(new_img, i, radius=2, color=(255, 0, 0), thickness=-1)
+
+    new_img = cv2.circle(new_img, pts, radius=5, color=(0, 0, 255), thickness=-1)
 
     # ##################################
     # # Check the result
