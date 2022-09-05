@@ -24,24 +24,24 @@ def expand_mask(shape, crop_corners, mask):
 def rope_grow(rope_seed, feature_mask):
     ## rope_seed is your dl network output
     ## feature_mask can be obtained from hue channel
-    height = feature_mask.shape[0]
-    width = feature_mask.shape[1]
+    [height, width] = feature_mask.shape
 
     mixed = copy.deepcopy(rope_seed)
 
     kernel = np.ones((5, 5), np.uint8)
-    feature_dilate = cv2.dilate(feature_mask, kernel, iterations=1)
+    feature_mask = cv2.dilate(feature_mask, kernel, iterations=1)
+    feature_mask = cv2.erode(feature_mask, kernel, iterations=1)
 
     for iy in range(height-1):
         for ix in range(width):
             if mixed[iy, ix] > 100:
-                if feature_dilate[iy+1, ix] > 100:
+                if feature_mask[iy+1, ix] > 100:
                     mixed[iy+1, ix] = 255
 
     for iy in range(height-1, 0, -1):
         for ix in range(width):
             if mixed[iy, ix] > 100:
-                if feature_dilate[iy-1, ix] > 100:
+                if feature_mask[iy-1, ix] > 100:
                     mixed[iy-1, ix] = 255
 
     return mixed
@@ -66,7 +66,7 @@ def find_ropes(img):
     #     if img[iy, ix] > 100:
     #         ropes.append(rope_info())
     #         ropes[-1].link = [iy, ix]
-    #         ropes[-1].length = 1
+    #         ropes[-1].len = 1
 
     for iy in range(height-1, 0, -1):
         for ix in range(width):
@@ -78,22 +78,30 @@ def find_ropes(img):
                         ## is connected to one of the rope
                         connected.append(j)
                 if len(connected) > 0:
+                    # filter out short branch
+                    grow_dir = []
+                    max_len = 0
                     for k in connected:
+                        if (k.len > 10) or (k.len > max_len):
+                            if (k.len > max_len):
+                                max_len = k.len
+                            grow_dir.append(k)
+                    for k in grow_dir:
                         k.link = [[iy, ix]] + k.link
-                        k.length += 1
+                        k.len += 1
                 else:
                     ## no previous section, create a new one
                     ropes.append(rope_info())
                     ropes[-1].link = [[iy, ix]]
-                    ropes[-1].length = 1
+                    ropes[-1].len = 1
             else:
                 continue
     
     for r in ropes:
-        print(r.length, end=',')
+        print(r.len, end=',')
     print('')
 
-    ropes.sort(key=operator.attrgetter('length'), reverse=True)
+    ropes.sort(key=operator.attrgetter('len'), reverse=True)
     ropes = ropes[:2]
 
     return ropes
@@ -106,4 +114,4 @@ class rope_info():
     def __init__(self):
         self.link = []
         self.center = None
-        self.length = 0
+        self.len = 0

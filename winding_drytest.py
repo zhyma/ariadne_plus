@@ -38,7 +38,7 @@ ariadne = AriadnePlus(main_folder, num_segments)
 ##################################
 
 if show_result:
-    file_list = [file_list[0]]
+    file_list = [file_list[12]]
 
 for img_name in file_list:
 

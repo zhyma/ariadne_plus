@@ -27,8 +27,7 @@ def get_subimg_coord(poly, ratio=None):
 
 def binarize_by_hue(h_img, corners, color_range):
     ## extract feature_map from img by using the 2d bounding box
-    height = h_img.shape[0]
-    width = h_img.shape[1]
+    [height, width] = h_img.shape
     output = np.zeros((height,width), dtype=np.uint8)
     [[x1, y1], [x2, y2]] = corners
     for iy in range(y1, y2):
@@ -55,8 +54,7 @@ def hue_detection(img, corners, debug=False):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     ## extract feature_map from img by using the 2d bounding box
-    height = img.shape[0]
-    width = img.shape[1]
+    [height, width, channel] = img.shape
     feature_map = []
     masked_image = np.zeros((height,width), dtype=np.uint8)
     for iy in range(height):
