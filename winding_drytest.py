@@ -1,5 +1,6 @@
 import cv2
 import os
+import copy
 
 from skimage.morphology import skeletonize
 import matplotlib.pyplot as plt
@@ -11,7 +12,7 @@ from winding.create_mask import apply_crop, draw_dl_mask
 import numpy as np
 
 from winding.rope_pre_process import get_subimg
-from winding.rope_post_process import get_ropes
+from winding.rope_post_process import get_rope_mask, find_ropes
 
 
 # from scripts.extra.post_process import mask_or
@@ -23,7 +24,7 @@ for filename in os.listdir('./winding'):
 
 
 num_segments = 30
-show_result = True
+show_result = False
 
 main_folder = os.getcwd()
 
@@ -37,7 +38,7 @@ ariadne = AriadnePlus(main_folder, num_segments)
 ##################################
 
 if show_result:
-    file_list = [file_list[-1]]
+    file_list = [file_list[0]]
 
 for img_name in file_list:
 
@@ -59,16 +60,26 @@ for img_name in file_list:
 
     # new_img = draw_dl_mask(img, crop_corners, feature_mask, color='b')
 
-    full_mask = get_ropes(img.shape, crop_corners, rv["img_mask"], feature_mask)
+    full_mask = get_rope_mask(img.shape[:2], crop_corners, rv["img_mask"], feature_mask)
+    r = find_ropes(full_mask)
+
+    new_img = copy.deepcopy(img)
+    for i in r[0].link:
+        [y, x] = i
+        new_img = cv2.circle(new_img, (x,y), radius=2, color=(255, 0, 0), thickness=-1)
+
+    for i in r[1].link:
+        [y, x] = i
+        new_img = cv2.circle(new_img, (x,y), radius=2, color=(0, 255, ), thickness=-1)
 
     # ##################################
     # # Check the result
     # ################################## 
 
-    kernel = np.ones((5, 5), np.uint8)
-    mask_dilate = cv2.dilate(full_mask, kernel, iterations=1)
-    new_img = draw_dl_mask(img, np.array([[0, 0],[1279,719]]), mask_dilate, color='b')
-    cv2.polylines(new_img,[corners],True,(0,255,255))
+    # kernel = np.ones((5, 5), np.uint8)
+    # mask_dilate = cv2.dilate(full_mask, kernel, iterations=1)
+    # new_img = draw_dl_mask(img, np.array([[0, 0],[1279,719]]), mask_dilate, color='b')
+    # cv2.polylines(new_img,[corners],True,(0,255,255))
 
     if show_result: 
         ##################################
