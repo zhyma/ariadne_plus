@@ -54,7 +54,7 @@ if __name__ == '__main__':
         req.input_image = img_msg
         resp1 = get_cable(req)
         # print("get cable:")
-        print(resp1.tck)
+        # print(resp1.tck)
         cv_image = bridge.imgmsg_to_cv2(resp1.mask_image, desired_encoding='passthrough')
         display_img(cv_image)
     except rospy.ServiceException as e:

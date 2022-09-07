@@ -70,7 +70,7 @@ class AriadnePlus():
         img_mask[img_mask < 127] = 0
         img_mask[img_mask >=127] = 255
 
-        result_spline = [-1]
+        result_spline = []
         mask_final = None
         t3 = arrow.utcnow()
 

@@ -69,14 +69,16 @@ for img_name in file_list:
     l_expect = 200
     pts = find_gp(r[0], corners, l_expect)
 
+    print("grasping poin is:{}".format(pts))
+
     new_img = copy.deepcopy(img)
     if r is not None:
         for i in r[1].link:
-            new_img = cv2.circle(new_img, i, radius=2, color=(0, 255, 0), thickness=-1)
+            new_img = cv2.circle(new_img, (i[0], i[1]), radius=2, color=(0, 255, 0), thickness=-1)
         for i in r[0].link:
-            new_img = cv2.circle(new_img, i, radius=2, color=(255, 0, 0), thickness=-1)
+            new_img = cv2.circle(new_img, (i[0], i[1]), radius=2, color=(255, 0, 0), thickness=-1)
 
-    new_img = cv2.circle(new_img, pts, radius=5, color=(0, 0, 255), thickness=-1)
+    new_img = cv2.circle(new_img, (pts[0], pts[1]), radius=5, color=(0, 0, 255), thickness=-1)
 
     # ##################################
     # # Check the result
