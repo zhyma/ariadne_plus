@@ -7,7 +7,7 @@ from math import sqrt
 import matplotlib.pyplot as plt
 
 from rope_pre_process import hue_detection
-from quality_check import helix_len_mask, check_adv
+from adv_check import helix_len_mask, check_adv
 
 def img_binary(img, color_range):
     # input should be a single channel image
