@@ -34,15 +34,20 @@ def helix_adv_mask(h_img, poly, color_range):
 
     return output
 
-def get_single_hull(img):
+def find_all_contours(img, size_min=50):
     contours, hierarchy = cv2.findContours(img,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
     rope_piece = []
     for i in range(len(contours)):
         area = cv2.contourArea(contours[i])
-        if area > 50:
+        if area > size_min:
             rope_piece.append(i)
 
-    cont = np.vstack([contours[i] for i in rope_piece])
+    cont = [contours[i] for i in rope_piece]
+    return cont
+
+def get_single_hull(img):
+    cont = find_all_contours(img)
+    cont = np.vstack([i for i in cont])
     hull = cv2.convexHull(cont)
     return hull
 
