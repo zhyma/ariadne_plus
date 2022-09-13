@@ -62,7 +62,7 @@ def find_rope_width(img):
     box = np.int0(box)
     return int(width), box
 
-def string_search(img, bottom_edge):
+def string_search(img, bottom_edge, debug=False):
     ## search for the longest string(path) within a given image
     [height, width] = img.shape
 
@@ -85,13 +85,11 @@ def string_search(img, bottom_edge):
     ## find the extra length
     ## breath first search, always prune the shortest branch greedily
     ## find the intersection between the skeleton and the 
-    
     search = True
     node0 = node(rope_top, None)
     visit_list = [node0]
     frontier = [node0]
     ## 8 connection
-    search_dir = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
     while search:
         l = len(frontier)
         ## search on all frontier nodes, 
@@ -99,8 +97,7 @@ def string_search(img, bottom_edge):
         ## or delete the frontier node (if no child, prune greadily)
         for i in range(l-1, -1, -1):
             curr_node = frontier[i]
-            print("parent node: [{}]: ".format(curr_node.xy), end=",")
-            for next in search_dir:
+            for next in  [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]:
                 x = curr_node.xy[0] + next[0]
                 y = curr_node.xy[1] + next[1]
                 n_children = 0
@@ -110,15 +107,14 @@ def string_search(img, bottom_edge):
                     if [x,y] == j.xy:
                         visited = True
 
+                ## search for valid kids
                 if visited:
                     ## skip any visited
                     continue
-
-                ## search for its' kids
                 if (x < 0) or (y < 0) or (x > width-1) or (y > height-1):
                     ## skip those out of the boundary
                     continue
-                elif img[y, x] < 100:
+                if img[y, x] < 100:
                     ## skip those not being marked
                     continue
                 
@@ -127,40 +123,46 @@ def string_search(img, bottom_edge):
                 new_node = node([x,y], curr_node)
                 frontier.append(new_node)
                 visit_list.append(new_node)
-                print("add node: [{}]".format([x,y]), end=', ')
-                # visited.append(node([x,y], curr_node))
 
                 if n_children < 1:
                     ## reach the edge of the image, does not have a child  
                     curr_node.n_children = -1
-
                 else:
                     curr_node.n_children = n_children
 
-            print('')
-
             if len(frontier) > 1:
                 ## more than one frontier node left, the other one must has the same length
+                ## (edges between nodes are equally weighted)
                 frontier.pop(i)
             else:
                 ## no other frontier node left, stop searching
                 search = False
 
-        print("====number of frontiers: {}====".format(len(frontier)))
-
-    print(frontier[0].len)
-
-    new_mask = np.zeros((height, width), dtype=np.uint8)
+    mask = None
+    
     string = []
     i_node = frontier[0]
     while i_node.parent is not None:
-        string.append(i_node.xy)
+        string = [i_node.xy] + string
         i_node = i_node.parent
 
-    for i in string:
-        new_mask[i[1], i[0]] = 255
+    extra_len = 0
+    for [x,y] in string:
+        if y - (a*x+b) > 0:
+            extra_len += 1
 
-    return rope_top, frontier[0].len, new_mask
+    if debug:
+        mask = np.zeros((height, width), dtype=np.uint8)
+        for [x,y] in string:
+            mask[y, x] = 80
+            if y - (a*x+b) > 0:
+                mask[y, x] = 255
+
+        cv2.line(mask, bottom_edge[0], bottom_edge[1], 255, 2)
+
+    print("total len: {}, extra len: {}".format(frontier[0].len, extra_len))
+
+    return rope_top, extra_len, mask
 
 def remove_active(img, rope_width, bottom_edge):
 
@@ -254,23 +256,6 @@ class node():
             
         self.n_children = 0
 
-def draw_cutting_line(img, line):
-    output = copy.deepcopy(img)
-    [height, width] = img.shape
-
-    [x1, y1] = line[0]
-    [x2, y2] = line[1]
-    a = (y2-y1)/(x2-x1)
-    b = y1-a*x1
-
-    for iy in range(height):
-        for ix in range(width):
-            j = iy - (a*ix+b)
-            if (j < 0) and (output[iy,ix] > 100):
-                output[iy, ix] = 80
-    cv2.line(output, line[0], line[1], 255, 2)
-    return output
-
 if __name__ == '__main__': 
     from rope_pre_process import hue_detection
 
@@ -310,13 +295,11 @@ if __name__ == '__main__':
         sub_mask, offset, bottom_edge = helix_len_mask(cv2.cvtColor(img[i+1], cv2.COLOR_BGR2HSV)[:,:,0], poly, rope_hue)
         mask.append(sub_mask)
         new_mask = remove_active(mask[i], rope_width, bottom_edge)
-        _, _, filtered_string = string_search(new_mask, bottom_edge)
-        # inter_step_img.append(new_mask)
-        # cv2.drawContours(inter_step_img[i], [contours[i]],-1,255,1)
+        top, extra_len, filtered_string = string_search(new_mask, bottom_edge, debug=True)
+        filtered_string = cv2.circle(filtered_string, top, radius=2, color=255, thickness=-1)
 
         ax[i+5].imshow(mask[i])
-        # inter_step_img.append(draw_cutting_line(new_mask, bottom_edge))
-        inter_step_img.append(draw_cutting_line(filtered_string, bottom_edge))
+        inter_step_img.append(filtered_string)
         ax[i+9].imshow(inter_step_img[i])
 
     plt.tight_layout()
