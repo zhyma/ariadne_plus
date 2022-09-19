@@ -24,7 +24,7 @@ for filename in os.listdir('./winding'):
 
 
 num_segments = 30
-show_result = True
+show_result = False
 
 main_folder = os.getcwd()
 
